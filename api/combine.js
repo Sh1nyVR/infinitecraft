@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY || "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";
   const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
   if (!apiKey) {
     json(res, 500, { error: "missing_groq_key" });
@@ -101,7 +101,6 @@ Return only JSON: {"name":"short title case name","kind":"block or item"}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_completion_tokens: 80,
-      response_format: { type: "json_object" },
     }),
   });
 

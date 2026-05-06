@@ -106,7 +106,6 @@ Return only JSON: {"name":"short title case name","kind":"block or item"}`;
     messages: [{ role: "user", content: prompt }],
     temperature: 0.7,
     max_completion_tokens: 80,
-    response_format: { type: "json_object" },
   });
 
   const req = https.request(
