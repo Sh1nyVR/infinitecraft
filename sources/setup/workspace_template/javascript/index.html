@@ -3,14 +3,15 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta name="description" content="EaglercraftX 1.8 test directory HTML page" />
+		<meta name="description" content="infinitecraft test directory HTML page" />
 		<meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.8, 1.8.8" />
-		<title>EaglercraftX 1.8</title>
+		<title>infinitecraft</title>
 		<meta property="og:locale" content="en-US" />
 		<meta property="og:type" content="website" />
-		<meta property="og:title" content="EaglercraftX 1.8" />
+		<meta property="og:title" content="infinitecraft" />
 		<meta property="og:description" content="test directory HTML page" />
 		<link type="image/png" rel="shortcut icon" href="favicon.png" />
+		<script type="text/javascript" src="https://js.puter.com/v2/"></script>
 		<script type="text/javascript" src="classes.js"></script>
 		<script type="text/javascript">
 			"use strict";
@@ -35,6 +36,9 @@
 							{ addr: "wss://relay.shhnowisnottheti.me/", comment: "ayunami relay #1", primary: relayId == 2 }
 						]
 					};
+					window.infiniteCraftProxyURL = "http://localhost:8787/combine";
+					window.infiniteCraftGroqAPIKey = "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";
+					window.infiniteCraftGroqModel = "llama-3.1-8b-instant";
 					
 					var q = window.location.search;
 					if(typeof q === "string" && q.startsWith("?")) {

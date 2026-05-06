@@ -5,13 +5,14 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="description" content="Play minecraft 1.8 in your browser" />
 		<meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.8, 1.8.8" />
-		<title>EaglercraftX 1.8</title>
+		<title>infinitecraft</title>
 		<meta property="og:locale" content="en-US" />
 		<meta property="og:type" content="website" />
-		<meta property="og:title" content="EaglercraftX 1.8" />
+		<meta property="og:title" content="infinitecraft" />
 		<meta property="og:description" content="Play minecraft 1.8 in your browser" />
 		<meta property="og:image" content="favicon.png" />
 		<link type="image/png" rel="shortcut icon" href="favicon.png" />
+		<script type="text/javascript" src="https://js.puter.com/v2/"></script>
 		<script type="text/javascript" src="classes.js"></script>
 		<script type="text/javascript">
 			"use strict";
@@ -28,6 +29,9 @@
 					if(!opts.assetsURI) opts.assetsURI = "assets.epk";
 					if(!opts.localesURI) opts.localesURI = "lang/";
 					if(!opts.worldsDB) opts.worldsDB = "worlds";
+					if(!window.infiniteCraftProxyURL) window.infiniteCraftProxyURL = "http://localhost:8787/combine";
+					if(!window.infiniteCraftGeminiAPIKey) window.infiniteCraftGroqAPIKey = "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";
+					if(!window.infiniteCraftGeminiModel) window.infiniteCraftGroqModel = "llama-3.1-8b-instant";
 					
 					if(!opts.joinServer)  {
 						var q = window.location.search;

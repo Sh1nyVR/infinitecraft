@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/GeneratedBuilds/EaglercraftX_1.8_Offline_en_US.html"
+    },
+    {
+      "source": "/combine",
+      "destination": "/api/combine"
+    }
+  ]
+}

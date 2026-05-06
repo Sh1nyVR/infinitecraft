@@ -9,7 +9,7 @@ public class EaglercraftVersion {
 	
 	/// Customize these to fit your fork:
 	
-	public static final String projectForkName = "EaglercraftX";
+	public static final String projectForkName = "infinitecraft";
 	public static final String projectForkVersion = "u35";
 	public static final String projectForkVendor = "lax1dude";
 	
@@ -42,7 +42,7 @@ public class EaglercraftVersion {
 	
 	// Miscellaneous variables:
 
-	public static final String mainMenuStringA = "Minecraft 1.8.8";
+	public static final String mainMenuStringA = "infinitecraft";
 	public static final String mainMenuStringB = projectOriginName + " " +
 			projectOriginRevision + "-" + projectOriginVersion + " ultimate";
 	public static final String mainMenuStringC = "";

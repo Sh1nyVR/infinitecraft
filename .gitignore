@@ -1,4 +1,5 @@
 buildtools_config.json
+tools/infinitecraft-local-config.json
 MinecraftSrc.zip
 /MinecraftSrc/*
 /pullrequest_merged_*
