@@ -36,7 +36,7 @@ function fallbackPixels(result) {
     }
     pixels.push(row);
   }
-  return { ...result, colors, pixels, generatedPixels: true };
+  return { ...result, colors, pixels, generatedPixels: true, generatedTexture: true };
 }
 
 async function readJson(req) {

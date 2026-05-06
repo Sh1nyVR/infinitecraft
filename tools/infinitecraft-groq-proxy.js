@@ -72,6 +72,7 @@ function fallbackPixels(result) {
   result.colors = colors;
   result.pixels = pixels;
   result.generatedPixels = true;
+  result.generatedTexture = true;
   return result;
 }
 

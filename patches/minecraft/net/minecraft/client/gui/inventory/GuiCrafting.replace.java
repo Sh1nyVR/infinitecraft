@@ -98,7 +98,7 @@ public class GuiCrafting extends GuiScreen {
 			return;
 		}
 		combining = true;
-		status = "Asking Gemini...";
+		status = "Asking Groq...";
 		InfiniteCraftGeminiClient.combine(leftElement, rightElement, new InfiniteCraftCallback() {
 			public void onComplete(InfiniteCraftResult resultIn) {
 				result = resultIn;
