@@ -33,7 +33,7 @@ Think like Infinite Craft: surprising, culturally recognizable, funny, iconic, a
 Examples: Delta + Rune -> Deltarune; Skibidi + Toilet -> Skibidi Toilet; Fanum + Tax -> Fanum Tax; Ohio + Rizz -> Sigma; Fire + Water -> Steam; Earth + Water -> Mud.
 Avoid joining words unless that phrase is the real result.
 For kind, use "block" for placeable physical things/materials/structures and "item" for tools, food, abstract concepts, liquids/gases/energy, media references, or handheld things.
-Return only JSON: {"name":"short title case name","kind":"block or item"}`;
+Respond with exactly one raw json object only. No markdown. No explanation. Schema: {"name":"short title case name","kind":"block or item"}`;
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -43,8 +43,11 @@ Return only JSON: {"name":"short title case name","kind":"block or item"}`;
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
+        messages: [
+          { role: "system", content: "Return only valid json. No markdown. No extra text." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.45,
         max_completion_tokens: 80,
       }),
     });
@@ -57,7 +60,12 @@ Return only JSON: {"name":"short title case name","kind":"block or item"}`;
     let parsed;
     try {
       const data = JSON.parse(text);
-      parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+      const content = data.choices?.[0]?.message?.content || "{}";
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        parsed = parseFirstJsonObject(content);
+      }
     } catch {
       parsed = {};
     }
@@ -88,6 +96,16 @@ function cleanName(value) {
     .replace(/[^a-zA-Z0-9 _'-]/g, "")
     .trim()
     .slice(0, 40);
+}
+
+function parseFirstJsonObject(text) {
+  const matches = String(text || "").match(/\{[^{}]*\}/g) || [];
+  for (const match of matches) {
+    try {
+      return JSON.parse(match);
+    } catch {}
+  }
+  return {};
 }
 
 function fallbackPixels(result) {

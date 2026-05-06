@@ -80,10 +80,11 @@ function normalizeResult(raw, a, b) {
   try {
     parsed = JSON.parse(raw);
   } catch (_) {
-    const match = String(raw || "").match(/\{[\s\S]*\}/);
-    if (match) {
+    const matches = String(raw || "").match(/\{[^{}]*\}/g) || [];
+    for (const match of matches) {
       try {
-        parsed = JSON.parse(match[0]);
+        parsed = JSON.parse(match);
+        break;
       } catch (_) {}
     }
   }
@@ -99,12 +100,15 @@ Think like Infinite Craft: surprising, culturally recognizable, funny, iconic, a
 Examples: Delta + Rune -> Deltarune; Skibidi + Toilet -> Skibidi Toilet; Fanum + Tax -> Fanum Tax; Ohio + Rizz -> Sigma; Fire + Water -> Steam; Earth + Water -> Mud.
 Avoid joining words unless that phrase is the real result.
 For kind, use "block" for placeable physical things/materials/structures and "item" for tools, food, abstract concepts, liquids/gases/energy, media references, or handheld things.
-Return only JSON: {"name":"short title case name","kind":"block or item"}`;
+Respond with exactly one raw json object only. No markdown. No explanation. Schema: {"name":"short title case name","kind":"block or item"}`;
 
   const payload = JSON.stringify({
     model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.7,
+    messages: [
+      { role: "system", content: "Return only valid json. No markdown. No extra text." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.45,
     max_completion_tokens: 80,
   });
 
