@@ -6,32 +6,36 @@ import net.lax1dude.eaglercraft.v1_8.infinitecraft.InfiniteCraftResult;
 import net.lax1dude.eaglercraft.v1_8.opengl.GlStateManager;
 
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.Container;
+import net.minecraft.inventory.ContainerWorkbench;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraft.util.BlockPos;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraft.entity.player.InventoryPlayer;
 
-public class GuiCrafting extends GuiScreen {
+public class GuiCrafting extends GuiContainer {
 
 	private static final String[] BASE_ELEMENTS = new String[] { "Fire", "Water", "Wind", "Earth" };
 	private static final int[] BASE_COLORS = new int[] { 0xFF4B1F, 0x3FA7FF, 0xDCEBFF, 0x8A5A2B };
-	private static final int MAX_VISIBLE_ELEMENTS = 12;
+	private static final ResourceLocation CRAFTING_TABLE_GUI_TEXTURES = new ResourceLocation(
+			"textures/gui/container/crafting_table.png");
 
 	private final InventoryPlayer playerInventory;
 	@SuppressWarnings("unused")
 	private final World world;
 	@SuppressWarnings("unused")
 	private final BlockPos position;
+	private final ContainerWorkbench workbench;
 	private String leftElement;
 	private String rightElement;
 	private InfiniteCraftResult result;
-	private String status = "Choose two elements";
+	private String status = "Choose two ingredients";
 	private String lastResultName;
-	private String[] visibleElements = BASE_ELEMENTS;
 	private boolean combining = false;
 
 	public GuiCrafting(InventoryPlayer playerInv, World worldIn) {
@@ -39,36 +43,37 @@ public class GuiCrafting extends GuiScreen {
 	}
 
 	public GuiCrafting(InventoryPlayer playerInv, World worldIn, BlockPos blockPosition) {
+		super(new ContainerWorkbench(playerInv, worldIn, blockPosition));
 		this.playerInventory = playerInv;
 		this.world = worldIn;
 		this.position = blockPosition;
+		this.workbench = (ContainerWorkbench) this.inventorySlots;
+		this.xSize = 176;
+		this.ySize = 196;
 	}
 
 	public void initGui() {
+		super.initGui();
 		this.buttonList.clear();
-		this.visibleElements = buildVisibleElements();
-		int cx = this.width / 2;
-		int y = this.height / 2 - 70;
-		for (int i = 0; i < visibleElements.length; ++i) {
-			int row = i / 4;
-			int col = i % 4;
-			this.buttonList.add(new GuiButton(10 + i, cx - 154 + col * 78, y + row * 24, 72, 20,
-					shortButtonName(visibleElements[i])));
+		int y = this.guiTop + 6;
+		for (int i = 0; i < BASE_ELEMENTS.length; ++i) {
+			this.buttonList.add(new GuiButton(10 + i, this.guiLeft + 8 + i * 40, y, 36, 18, BASE_ELEMENTS[i]));
 		}
-		this.buttonList.add(new GuiButton(1, cx - 102, y + 92, 98, 20, "Clear"));
-		this.buttonList.add(new GuiButton(2, cx + 4, y + 92, 98, 20, "Combine"));
+		this.buttonList.add(new GuiButton(1, this.guiLeft + 8, this.guiTop + 70, 52, 18, "Clear"));
+		this.buttonList.add(new GuiButton(2, this.guiLeft + 116, this.guiTop + 70, 52, 18, "Combine"));
 	}
 
 	protected void actionPerformed(GuiButton button) {
-		if (button.id >= 10 && button.id < 10 + visibleElements.length) {
-			selectElement(visibleElements[button.id - 10]);
+		if (button.id >= 10 && button.id < 10 + BASE_ELEMENTS.length) {
+			selectElement(BASE_ELEMENTS[button.id - 10]);
 			return;
 		}
 		if (button.id == 1) {
 			leftElement = null;
 			rightElement = null;
 			result = null;
-			status = "Choose two elements";
+			status = "Choose two ingredients";
+			clearInputSlots();
 			return;
 		}
 		if (button.id == 2) {
@@ -77,9 +82,9 @@ public class GuiCrafting extends GuiScreen {
 	}
 
 	private void selectElement(String element) {
-		if (leftElement == null) {
+		if (leftInputStack() == null && leftElement == null) {
 			leftElement = element;
-		} else if (rightElement == null) {
+		} else if (rightInputStack() == null && rightElement == null) {
 			rightElement = element;
 		} else {
 			leftElement = rightElement;
@@ -93,18 +98,21 @@ public class GuiCrafting extends GuiScreen {
 		if (combining) {
 			return;
 		}
-		if (leftElement == null || rightElement == null) {
-			status = "Pick two elements first";
+		final String left = ingredientName(0, leftElement);
+		final String right = ingredientName(1, rightElement);
+		if (left == null || right == null) {
+			status = "Put two ingredients in the top grid slots";
 			return;
 		}
 		combining = true;
 		status = "Asking Groq...";
-		InfiniteCraftGeminiClient.combine(leftElement, rightElement, new InfiniteCraftCallback() {
+		InfiniteCraftGeminiClient.combine(left, right, new InfiniteCraftCallback() {
 			public void onComplete(InfiniteCraftResult resultIn) {
 				result = resultIn;
 				combining = false;
 				lastResultName = result.name;
 				status = "Created " + result.name + ", texture loading...";
+				consumeInputs();
 				giveResult(result);
 			}
 
@@ -112,7 +120,9 @@ public class GuiCrafting extends GuiScreen {
 				result = resultIn;
 				lastResultName = result.name;
 				status = "Texture ready for " + result.name;
-				initGui();
+				if (mc.currentScreen == GuiCrafting.this) {
+					initGui();
+				}
 			}
 
 			public void onFailure(String message) {
@@ -122,57 +132,73 @@ public class GuiCrafting extends GuiScreen {
 		});
 	}
 
-	private void giveResult(InfiniteCraftResult res) {
-		ItemStack stack;
-		if (res.block) {
-			stack = new ItemStack(Blocks.stained_hardened_clay, 1, colorMeta(res.colors));
-		} else {
-			stack = new ItemStack(Items.paper, 1);
+	private void consumeInputs() {
+		consumeInputSlot(0);
+		consumeInputSlot(1);
+		leftElement = null;
+		rightElement = null;
+	}
+
+	private void consumeInputSlot(int index) {
+		ItemStack stack = this.workbench.craftMatrix.getStackInSlot(index);
+		if (stack != null) {
+			--stack.stackSize;
+			if (stack.stackSize <= 0) {
+				this.workbench.craftMatrix.setInventorySlotContents(index, null);
+			}
 		}
+	}
+
+	private void clearInputSlots() {
+		for (int i = 0; i < 2; ++i) {
+			ItemStack stack = this.workbench.craftMatrix.getStackInSlot(i);
+			if (stack != null) {
+				if (!this.playerInventory.addItemStackToInventory(stack)) {
+					this.mc.thePlayer.dropPlayerItemWithRandomChoice(stack, false);
+				}
+				this.workbench.craftMatrix.setInventorySlotContents(i, null);
+			}
+		}
+	}
+
+	private ItemStack leftInputStack() {
+		return this.workbench.craftMatrix.getStackInSlot(0);
+	}
+
+	private ItemStack rightInputStack() {
+		return this.workbench.craftMatrix.getStackInSlot(1);
+	}
+
+	private String ingredientName(int slot, String fallback) {
+		ItemStack stack = this.workbench.craftMatrix.getStackInSlot(slot);
+		if (stack != null) {
+			String name = stack.getDisplayName();
+			if (name != null && name.length() > 0) {
+				return name;
+			}
+		}
+		return fallback;
+	}
+
+	private void giveResult(InfiniteCraftResult res) {
+		ItemStack stack = new ItemStack(Items.paper, 1);
 		stack.setStackDisplayName(res.name);
+		NBTTagCompound tag = new NBTTagCompound();
+		NBTTagCompound infinite = new NBTTagCompound();
+		infinite.setString("Name", res.name);
+		infinite.setBoolean("Block", res.block);
+		infinite.setBoolean("GeneratedTexture", res.generatedTexture);
+		tag.setTag("InfiniteCraft", infinite);
+		NBTTagCompound display = new NBTTagCompound();
+		NBTTagList lore = new NBTTagList();
+		lore.appendTag(new NBTTagString(res.block ? "InfiniteCraft block discovery" : "InfiniteCraft item discovery"));
+		lore.appendTag(new NBTTagString("Texture " + (res.generatedTexture ? "generated" : "pending")));
+		display.setTag("Lore", lore);
+		tag.setTag("display", display);
+		stack.setTagCompound(tag);
 		if (!this.playerInventory.addItemStackToInventory(stack)) {
 			this.mc.thePlayer.dropPlayerItemWithRandomChoice(stack, false);
 		}
-	}
-
-	private String[] buildVisibleElements() {
-		String[] elements = new String[MAX_VISIBLE_ELEMENTS];
-		int count = 0;
-		for (int i = 0; i < BASE_ELEMENTS.length && count < elements.length; ++i) {
-			elements[count++] = BASE_ELEMENTS[i];
-		}
-		if (this.playerInventory != null && this.playerInventory.mainInventory != null) {
-			for (int i = 0; i < this.playerInventory.mainInventory.length && count < elements.length; ++i) {
-				ItemStack stack = this.playerInventory.mainInventory[i];
-				if (stack != null) {
-					String name = stack.getDisplayName();
-					if (name != null && name.length() > 0 && !contains(elements, count, name)) {
-						elements[count++] = name;
-					}
-				}
-			}
-		}
-		String[] ret = new String[count];
-		for (int i = 0; i < count; ++i) {
-			ret[i] = elements[i];
-		}
-		return ret;
-	}
-
-	private boolean contains(String[] elements, int count, String name) {
-		for (int i = 0; i < count; ++i) {
-			if (name.equals(elements[i])) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private String shortButtonName(String name) {
-		if (name != null && name.length() > 10) {
-			return name.substring(0, 9) + ".";
-		}
-		return name;
 	}
 
 	private int colorMeta(String[] colors) {
@@ -218,43 +244,36 @@ public class GuiCrafting extends GuiScreen {
 	}
 
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-		this.drawDefaultBackground();
-		int cx = this.width / 2;
-		int top = this.height / 2 - 98;
-		this.drawCenteredString(this.fontRendererObj, "Infinite Crafting Table", cx, top, 0xFFFFFF);
-		this.drawCenteredString(this.fontRendererObj, status, cx, top + 16, 0xFFFF55);
-		drawSlot(cx - 76, top + 50, leftElement);
-		drawSlot(cx + 44, top + 50, rightElement);
-		this.drawCenteredString(this.fontRendererObj, "+", cx, top + 58, 0xFFFFFF);
-		if (result != null) {
-			this.drawCenteredString(this.fontRendererObj, result.name, cx, top + 126, 0xFFFFFF);
-			drawPreview(cx - 8, top + 144, result);
-			if (!result.generatedTexture) {
-				this.drawCenteredString(this.fontRendererObj, "base texture", cx, top + 181, 0xAAAAAA);
-			}
-		} else if (lastResultName != null) {
-			this.drawCenteredString(this.fontRendererObj, lastResultName, cx, top + 126, 0xFFFFFF);
-		}
 		super.drawScreen(mouseX, mouseY, partialTicks);
 	}
 
-	private void drawSlot(int x, int y, String element) {
-		drawRect(x, y, x + 32, y + 32, 0xFF202020);
-		drawRect(x + 1, y + 1, x + 31, y + 31, 0xFF4A4A4A);
-		if (element != null) {
-			int color = colorForElement(element);
-			drawRect(x + 6, y + 6, x + 26, y + 26, 0xFF000000 | color);
-			this.drawCenteredString(this.fontRendererObj, element, x + 16, y + 38, 0xFFFFFF);
+	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
+		this.fontRendererObj.drawString("Infinite Crafting", 8, 92, 0x404040);
+		this.fontRendererObj.drawString(this.playerInventory.getDisplayName().getUnformattedText(), 8, this.ySize - 96 + 2,
+				0x404040);
+		this.drawCenteredString(this.fontRendererObj, status, this.xSize / 2, 28, 0xFFFF55);
+		drawVirtualSlotLabel(30, 36, ingredientName(0, leftElement));
+		drawVirtualSlotLabel(48, 36, ingredientName(1, rightElement));
+		if (result != null) {
+			this.drawCenteredString(this.fontRendererObj, result.name, this.xSize / 2, 112, 0xFFFFFF);
+			drawPreview(this.xSize / 2 - 16, 124, result);
+		} else if (lastResultName != null) {
+			this.drawCenteredString(this.fontRendererObj, lastResultName, this.xSize / 2, 112, 0xFFFFFF);
 		}
 	}
 
-	private int colorForElement(String element) {
-		for (int i = 0; i < BASE_ELEMENTS.length; ++i) {
-			if (BASE_ELEMENTS[i].equals(element)) {
-				return BASE_COLORS[i];
-			}
+	private void drawVirtualSlotLabel(int x, int y, String element) {
+		if (element != null) {
+			String shortName = element.length() > 12 ? element.substring(0, 11) + "." : element;
+			this.drawCenteredString(this.fontRendererObj, shortName, x + 8, y + 20, 0xFFFFFF);
 		}
-		return 0xAAAAAA;
+	}
+
+	protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(CRAFTING_TABLE_GUI_TEXTURES);
+		this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, 166);
+		drawRect(this.guiLeft, this.guiTop + 88, this.guiLeft + this.xSize, this.guiTop + this.ySize, 0xC0101010);
 	}
 
 	private void drawPreview(int x, int y, InfiniteCraftResult res) {
@@ -289,11 +308,16 @@ public class GuiCrafting extends GuiScreen {
 		return 0xAAAAAA;
 	}
 
+	public void onGuiClosed() {
+		super.onGuiClosed();
+		clearInputSlots();
+	}
+
 	public boolean doesGuiPauseGame() {
 		return false;
 	}
 
 	public Container getContainer() {
-		return null;
+		return this.inventorySlots;
 	}
 }
