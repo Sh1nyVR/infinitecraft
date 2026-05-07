@@ -6,9 +6,11 @@ import net.lax1dude.eaglercraft.v1_8.infinitecraft.InfiniteCraftResult;
 import net.lax1dude.eaglercraft.v1_8.opengl.GlStateManager;
 
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.Container;
-import net.minecraft.inventory.ContainerWorkbench;
+import net.minecraft.inventory.InventoryBasic;
+import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -30,7 +32,7 @@ public class GuiCrafting extends GuiContainer {
 	private final World world;
 	@SuppressWarnings("unused")
 	private final BlockPos position;
-	private final ContainerWorkbench workbench;
+	private final InfiniteCraftContainer infiniteContainer;
 	private String leftElement;
 	private String rightElement;
 	private InfiniteCraftResult result;
@@ -43,11 +45,11 @@ public class GuiCrafting extends GuiContainer {
 	}
 
 	public GuiCrafting(InventoryPlayer playerInv, World worldIn, BlockPos blockPosition) {
-		super(new ContainerWorkbench(playerInv, worldIn, blockPosition));
+		super(new InfiniteCraftContainer(playerInv));
 		this.playerInventory = playerInv;
 		this.world = worldIn;
 		this.position = blockPosition;
-		this.workbench = (ContainerWorkbench) this.inventorySlots;
+		this.infiniteContainer = (InfiniteCraftContainer) this.inventorySlots;
 		this.xSize = 176;
 		this.ySize = 196;
 	}
@@ -140,37 +142,37 @@ public class GuiCrafting extends GuiContainer {
 	}
 
 	private void consumeInputSlot(int index) {
-		ItemStack stack = this.workbench.craftMatrix.getStackInSlot(index);
+		ItemStack stack = this.infiniteContainer.inputInventory.getStackInSlot(index);
 		if (stack != null) {
 			--stack.stackSize;
 			if (stack.stackSize <= 0) {
-				this.workbench.craftMatrix.setInventorySlotContents(index, null);
+				this.infiniteContainer.inputInventory.setInventorySlotContents(index, null);
 			}
 		}
 	}
 
 	private void clearInputSlots() {
 		for (int i = 0; i < 2; ++i) {
-			ItemStack stack = this.workbench.craftMatrix.getStackInSlot(i);
+			ItemStack stack = this.infiniteContainer.inputInventory.getStackInSlot(i);
 			if (stack != null) {
 				if (!this.playerInventory.addItemStackToInventory(stack)) {
 					this.mc.thePlayer.dropPlayerItemWithRandomChoice(stack, false);
 				}
-				this.workbench.craftMatrix.setInventorySlotContents(i, null);
+				this.infiniteContainer.inputInventory.setInventorySlotContents(i, null);
 			}
 		}
 	}
 
 	private ItemStack leftInputStack() {
-		return this.workbench.craftMatrix.getStackInSlot(0);
+		return this.infiniteContainer.inputInventory.getStackInSlot(0);
 	}
 
 	private ItemStack rightInputStack() {
-		return this.workbench.craftMatrix.getStackInSlot(1);
+		return this.infiniteContainer.inputInventory.getStackInSlot(1);
 	}
 
 	private String ingredientName(int slot, String fallback) {
-		ItemStack stack = this.workbench.craftMatrix.getStackInSlot(slot);
+		ItemStack stack = this.infiniteContainer.inputInventory.getStackInSlot(slot);
 		if (stack != null) {
 			String name = stack.getDisplayName();
 			if (name != null && name.length() > 0) {
@@ -182,7 +184,6 @@ public class GuiCrafting extends GuiContainer {
 
 	private void giveResult(InfiniteCraftResult res) {
 		ItemStack stack = new ItemStack(Items.paper, 1);
-		stack.setStackDisplayName(res.name);
 		NBTTagCompound tag = new NBTTagCompound();
 		NBTTagCompound infinite = new NBTTagCompound();
 		infinite.setString("Name", res.name);
@@ -196,6 +197,7 @@ public class GuiCrafting extends GuiContainer {
 		display.setTag("Lore", lore);
 		tag.setTag("display", display);
 		stack.setTagCompound(tag);
+		stack.setStackDisplayName(res.name);
 		if (!this.playerInventory.addItemStackToInventory(stack)) {
 			this.mc.thePlayer.dropPlayerItemWithRandomChoice(stack, false);
 		}
@@ -319,5 +321,44 @@ public class GuiCrafting extends GuiContainer {
 
 	public Container getContainer() {
 		return this.inventorySlots;
+	}
+
+	private static class InfiniteCraftContainer extends Container {
+
+		private final InventoryBasic inputInventory = new InventoryBasic("Infinite Craft", false, 2);
+
+		private InfiniteCraftContainer(InventoryPlayer playerInv) {
+			this.addSlotToContainer(new Slot(inputInventory, 0, 30, 36));
+			this.addSlotToContainer(new Slot(inputInventory, 1, 48, 36));
+
+			for (int row = 0; row < 3; ++row) {
+				for (int col = 0; col < 9; ++col) {
+					this.addSlotToContainer(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 114 + row * 18));
+				}
+			}
+
+			for (int col = 0; col < 9; ++col) {
+				this.addSlotToContainer(new Slot(playerInv, col, 8 + col * 18, 172));
+			}
+		}
+
+		public boolean canInteractWith(EntityPlayer playerIn) {
+			return true;
+		}
+
+		public ItemStack transferStackInSlot(EntityPlayer playerIn, int index) {
+			return null;
+		}
+
+		public void onContainerClosed(EntityPlayer playerIn) {
+			super.onContainerClosed(playerIn);
+			for (int i = 0; i < 2; ++i) {
+				ItemStack stack = this.inputInventory.getStackInSlot(i);
+				if (stack != null) {
+					playerIn.dropPlayerItemWithRandomChoice(stack, false);
+					this.inputInventory.setInventorySlotContents(i, null);
+				}
+			}
+		}
 	}
 }
